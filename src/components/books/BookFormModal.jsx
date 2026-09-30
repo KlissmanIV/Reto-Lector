@@ -2,9 +2,8 @@ import { useId, useState } from 'react';
 import { Check } from 'lucide-react';
 import Modal from '../common/Modal';
 import BookCover from './BookCover';
-import { STATUS_OPTIONS } from './bookMeta';
+import { COVER_COLORS, STATUS_OPTIONS } from './bookMeta';
 import { Segmented } from '../common/ui';
-import { COVER_COLORS } from '../../data/demoData';
 import { useAppData } from '../../context/AppDataContext';
 import { calcularPuntos } from '../../utils/scoring';
 import { todayISO } from '../../utils/dates';
@@ -19,12 +18,13 @@ function initialState(book, defaults, currentUserId) {
     pages: '',
     currentPage: '0',
     status: 'pending',
-    ownerId: defaults?.ownerId || currentUserId,
     startedAt: todayISO(),
     notes: '',
     coverColor: COVER_COLORS[Math.floor(Math.random() * COVER_COLORS.length)],
     coverUrl: '',
     ...defaults,
+    // Cada participante solo puede añadir libros a su propia biblioteca.
+    ownerId: currentUserId,
   };
 }
 
@@ -56,7 +56,7 @@ function Field({ id, label, error, hint, children, optional }) {
 }
 
 function BookForm({ book, defaults, onDone, onCancel }) {
-  const { users, currentUser, actions } = useAppData();
+  const { currentUser, actions } = useAppData();
   const isEdit = !!book;
   const [values, setValues] = useState(() => initialState(book, defaults, currentUser?.id));
   const [errors, setErrors] = useState({});
@@ -141,15 +141,6 @@ function BookForm({ book, defaults, onDone, onCancel }) {
 
           {!isEdit && (
             <>
-              <div className="field">
-                <span className="field-label" id={id('owner-l')}>¿De quién es?</span>
-                <Segmented
-                  label="Participante"
-                  options={users.map((u) => ({ value: u.id, label: u.shortName }))}
-                  value={values.ownerId}
-                  onChange={set('ownerId')}
-                />
-              </div>
               <div className="field">
                 <span className="field-label">Estado</span>
                 <Segmented label="Estado inicial" options={STATUS_OPTIONS} value={values.status} onChange={set('status')} size="sm" />

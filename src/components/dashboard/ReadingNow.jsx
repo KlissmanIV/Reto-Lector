@@ -15,9 +15,11 @@ export default function ReadingNow({ user, books, onOpen, onAdd }) {
         <div className="rn-empty">
           <BookOpen size={18} aria-hidden="true" />
           <span>Nada en curso.</span>
-          <button type="button" className="btn-link" onClick={onAdd}>
-            <Plus size={15} aria-hidden="true" /> Añadir libro
-          </button>
+          {onAdd && (
+            <button type="button" className="btn-link" onClick={onAdd}>
+              <Plus size={15} aria-hidden="true" /> Añadir libro
+            </button>
+          )}
         </div>
       ) : (
         <ul className="rn-list">

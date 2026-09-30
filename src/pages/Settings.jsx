@@ -1,8 +1,10 @@
-import { Eraser, Monitor, Moon, RotateCcw, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { LogOut, Monitor, Moon, Sun, Upload } from 'lucide-react';
 import { useAppData } from '../context/AppDataContext';
 import { useUi } from '../context/UiContext';
 import { useToast } from '../context/ToastContext';
-import { PageHeader, Segmented } from '../components/common/ui';
+import { Avatar, PageHeader, Segmented } from '../components/common/ui';
+import { hasLegacyData } from '../services/storageService';
 
 const THEMES = [
   { value: 'light', label: 'Claro', icon: Sun },
@@ -23,32 +25,34 @@ function Row({ title, desc, children }) {
 }
 
 export default function Settings() {
-  const { settings, users, actions } = useAppData();
+  const { settings, currentUser, email, actions } = useAppData();
   const { confirm } = useUi();
   const { toast } = useToast();
+  const [legacy, setLegacy] = useState(hasLegacyData);
+  const [importing, setImporting] = useState(false);
 
-  const reset = async () => {
-    const ok = await confirm({
-      title: 'Restaurar datos iniciales',
-      message: 'Se reemplazarán libros, desafíos e historial por los datos iniciales de la competencia. Tus ajustes se conservan.',
-      confirmLabel: 'Restaurar',
-      tone: 'danger',
-    });
-    if (!ok) return;
-    await actions.resetDemo();
-    toast('Datos iniciales restaurados');
+  const logout = async () => {
+    const ok = await confirm({ title: 'Cerrar sesión', message: 'Tendrás que volver a entrar con tu correo y contraseña.', confirmLabel: 'Cerrar sesión' });
+    if (ok) await actions.signOut();
   };
 
-  const clear = async () => {
+  const importLocal = async () => {
     const ok = await confirm({
-      title: 'Empezar desde cero',
-      message: 'Se borrarán todos los libros, desafíos e historial de este navegador. No se puede deshacer.',
-      confirmLabel: 'Borrar todo',
-      tone: 'danger',
+      title: 'Subir datos de este navegador',
+      message: 'Se subirán tus libros y tu actividad guardados en este dispositivo. Lo que ya exista en la base de datos no se duplica.',
+      confirmLabel: 'Subir datos',
     });
     if (!ok) return;
-    await actions.clearAll();
-    toast('Datos borrados');
+    setImporting(true);
+    try {
+      const count = await actions.importLegacy();
+      toast(count ? `Datos subidos: ${count} registros nuevos` : 'Todo estaba ya sincronizado');
+      setLegacy(false);
+    } catch (err) {
+      toast(err.message, { tone: 'error' });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -58,43 +62,44 @@ export default function Settings() {
       <section className="section" aria-labelledby="s-appearance">
         <h2 id="s-appearance" className="section-title">Apariencia</h2>
         <div className="surface">
-          <Row title="Tema" desc="Sistema sigue la configuración de tu dispositivo.">
+          <Row title="Tema" desc="Se guarda en este dispositivo. Sistema sigue la configuración del dispositivo.">
             <Segmented label="Tema" options={THEMES} value={settings.theme} onChange={(theme) => actions.updateSettings({ theme })} size="sm" />
           </Row>
         </div>
       </section>
 
-      <section className="section" aria-labelledby="s-user">
-        <h2 id="s-user" className="section-title">Participante activo</h2>
+      <section className="section" aria-labelledby="s-account">
+        <h2 id="s-account" className="section-title">Cuenta</h2>
         <div className="surface">
-          <Row title="Usar la app como" desc="Los libros nuevos se asignan por defecto a este participante.">
-            <Segmented
-              label="Participante activo"
-              size="sm"
-              options={users.map((u) => ({ value: u.id, label: u.shortName }))}
-              value={settings.activeUserId}
-              onChange={(activeUserId) => actions.updateSettings({ activeUserId })}
-            />
+          <Row
+            title={
+              <span className="d-inline-flex align-items-center gap-2">
+                {currentUser && <Avatar user={currentUser} size={28} />} {currentUser?.name}
+              </span>
+            }
+            desc={<span className="settings-email">{email}</span>}
+          >
+            <button type="button" className="btn btn-secondary" onClick={logout}>
+              <LogOut size={16} aria-hidden="true" /> Cerrar sesión
+            </button>
           </Row>
         </div>
       </section>
 
-      <section className="section" aria-labelledby="s-data">
-        <h2 id="s-data" className="section-title">Datos</h2>
-        <div className="surface">
-          <Row title="Datos iniciales" desc="Vuelve a la Competencia por un libro con los libros cargados al inicio.">
-            <button type="button" className="btn btn-secondary" onClick={reset}>
-              <RotateCcw size={16} aria-hidden="true" /> Restaurar
-            </button>
-          </Row>
-          <Row title="Empezar desde cero" desc="Borra libros, desafíos e historial. Útil para empezar vuestro primer desafío real.">
-            <button type="button" className="btn btn-ghost-danger" onClick={clear}>
-              <Eraser size={16} aria-hidden="true" /> Borrar datos
-            </button>
-          </Row>
-        </div>
-        <p className="settings-foot">Los datos se guardan solo en este navegador. La sincronización llegará con la versión conectada.</p>
-      </section>
+      {legacy && (
+        <section className="section" aria-labelledby="s-data">
+          <h2 id="s-data" className="section-title">Datos</h2>
+          <div className="surface">
+            <Row title="Datos guardados en este navegador" desc="Encontramos datos de la versión anterior de la app. Súbelos una vez para que se vean en todos tus dispositivos.">
+              <button type="button" className="btn btn-primary" onClick={importLocal} disabled={importing}>
+                <Upload size={16} aria-hidden="true" /> {importing ? 'Subiendo…' : 'Subir datos'}
+              </button>
+            </Row>
+          </div>
+        </section>
+      )}
+
+      <p className="settings-foot">Los datos se sincronizan entre dispositivos. Al volver a la app se cargan los últimos cambios.</p>
     </div>
   );
 }

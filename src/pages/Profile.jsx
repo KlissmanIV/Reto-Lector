@@ -51,9 +51,11 @@ export default function Profile() {
           <h1 className="profile-name">{user.name}</h1>
           {user.bio && <p className="profile-bio">{user.bio}</p>}
         </div>
-        <button type="button" className="btn btn-secondary profile-edit" onClick={() => setEditing(true)}>
-          <Pencil size={16} aria-hidden="true" /> Editar
-        </button>
+        {user.id === currentUser?.id && (
+          <button type="button" className="btn btn-secondary profile-edit" onClick={() => setEditing(true)}>
+            <Pencil size={16} aria-hidden="true" /> Editar
+          </button>
+        )}
       </header>
 
       <dl className="stat-tiles">
@@ -68,7 +70,7 @@ export default function Profile() {
       <div className="profile-cols">
         <section className="section" aria-labelledby="p-reading">
           <h2 id="p-reading" className="section-title">En curso</h2>
-          <ReadingNow user={user} books={reading} onOpen={openBook} onAdd={() => openBookForm(null, { ownerId: user.id, status: 'reading' })} />
+          <ReadingNow user={user} books={reading} onOpen={openBook} onAdd={user.id === currentUser?.id ? () => openBookForm(null, { status: 'reading' }) : null} />
         </section>
 
         <section className="section" aria-labelledby="p-ach">

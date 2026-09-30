@@ -402,3 +402,13 @@
 .settings-title { font-size: 15px; font-weight: 600; }
 .settings-desc { font-size: 13.5px; color: var(--text-2); }
 .settings-foot { margin-top: var(--space-3); font-size: 13px; color: var(--text-3); }
+
+/* ---------- Acceso ---------- */
+.auth-screen { display: grid; place-items: center; min-height: 100dvh; padding: var(--space-5) var(--space-4); }
+.auth-card { width: min(100%, 400px); padding: var(--space-6) var(--space-5); box-shadow: var(--shadow-md); }
+.auth-brand { margin-bottom: var(--space-5); }
+.auth-title { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; }
+.auth-text { margin: 6px 0 var(--space-5); color: var(--text-2); }
+.auth-text code { font-size: 13px; overflow-wrap: anywhere; }
+.auth-error { margin: -4px 0 var(--space-3); }
+.settings-email { display: block; font-size: 13.5px; color: var(--text-3); overflow-wrap: anywhere; }

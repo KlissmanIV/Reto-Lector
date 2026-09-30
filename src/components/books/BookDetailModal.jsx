@@ -2,6 +2,7 @@ import { CalendarDays, Pencil, Sparkles, Trash2, X } from 'lucide-react';
 import Modal from '../common/Modal';
 import BookCover from './BookCover';
 import ProgressUpdater from './ProgressUpdater';
+import StatusBadge from './StatusBadge';
 import { STATUS_OPTIONS } from './bookMeta';
 import { Avatar, Segmented } from '../common/ui';
 import { useAppData } from '../../context/AppDataContext';
@@ -11,12 +12,14 @@ import { formatShortDate } from '../../utils/dates';
 import { formatNumber, progressPercent } from '../../utils/statistics';
 
 export default function BookDetailModal({ bookId, open: requestedOpen, onClose, onEdit, onDelete, onStatus, onFinish }) {
-  const { books, usersById, history, challenges, activeChallenge, actions } = useAppData();
+  const { books, usersById, history, challenges, activeChallenge, currentUser, actions } = useAppData();
   const { toast } = useToast();
   const book = books.find((b) => b.id === bookId);
   const open = requestedOpen && !!book;
 
   const owner = book ? usersById[book.ownerId] : null;
+  // Solo el dueño puede modificar su libro (la base de datos aplica la misma regla).
+  const canEdit = !!book && book.ownerId === currentUser?.id;
   const points = book ? calcularPuntos(book.pages) : 0;
   const award = book?.status === 'finished'
     ? history.find((e) => e.type === 'book_finished' && e.bookId === book.id && e.points > 0)
@@ -53,13 +56,17 @@ export default function BookDetailModal({ bookId, open: requestedOpen, onClose, 
               </button>
             </div>
 
-            <Segmented
-              label="Estado de lectura"
-              options={STATUS_OPTIONS}
-              value={book.status}
-              onChange={(s) => onStatus(book.id, s)}
-              className="bd-status"
-            />
+            {canEdit ? (
+              <Segmented
+                label="Estado de lectura"
+                options={STATUS_OPTIONS}
+                value={book.status}
+                onChange={(s) => onStatus(book.id, s)}
+                className="bd-status"
+              />
+            ) : (
+              <div><StatusBadge status={book.status} /></div>
+            )}
 
             <div className={`points-callout ${book.status === 'finished' ? 'is-done' : ''}`}>
               <Sparkles size={18} aria-hidden="true" />
@@ -88,14 +95,21 @@ export default function BookDetailModal({ bookId, open: requestedOpen, onClose, 
               </div>
             </dl>
 
-            {book.status !== 'finished' && <ProgressUpdater book={book} onSave={saveProgress} />}
+            {canEdit && book.status !== 'finished' && <ProgressUpdater book={book} onSave={saveProgress} />}
 
             <section className="bd-notes">
               <h3 className="section-label">Notas</h3>
-              {book.notes ? <p>{book.notes}</p> : <p className="text-muted-2">Sin notas todavía. Añade impresiones o citas desde Editar.</p>}
+              {book.notes && <p>{book.notes}</p>}
+              {!book.notes && (
+                <p className="text-muted-2">{canEdit ? 'Sin notas todavía. Añade impresiones o citas desde Editar.' : 'Sin notas.'}</p>
+              )}
             </section>
 
-            <footer className="bd-actions">
+            {!canEdit && owner && (
+              <p className="text-muted-2 bd-readonly">Solo {owner.shortName} puede modificar este libro.</p>
+            )}
+
+            {canEdit && <footer className="bd-actions">
               <button type="button" className="btn btn-ghost-danger" onClick={() => onDelete(book.id)}>
                 <Trash2 size={18} aria-hidden="true" /> Eliminar
               </button>
@@ -109,7 +123,7 @@ export default function BookDetailModal({ bookId, open: requestedOpen, onClose, 
                   </button>
                 )}
               </div>
-            </footer>
+            </footer>}
           </div>
         </div>
       )}

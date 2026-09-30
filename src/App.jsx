@@ -11,6 +11,7 @@ import Challenge from './pages/Challenge';
 import History from './pages/History';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Login, { AuthScreen } from './pages/Login';
 
 /** Aplica el tema (light / dark / system) y reacciona a cambios del sistema. */
 function useThemeSync(theme) {
@@ -41,12 +42,30 @@ function AppRoutes() {
   useThemeSync(settings.theme);
 
   if (status === 'loading') return <LoadingScreen />;
+  if (status === 'signedOut') return <Login />;
+  if (status === 'unconfigured') {
+    return (
+      <AuthScreen title="Falta configurar la base de datos">
+        <p className="auth-text">
+          Define las variables <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code> (en <code>.env</code> o en Vercel) y vuelve a compilar.
+        </p>
+      </AuthScreen>
+    );
+  }
+  if (status === 'noProfile') {
+    return (
+      <AuthScreen title="Cuenta sin vincular">
+        <p className="auth-text">Tu cuenta existe, pero todavía no está vinculada a un participante. Pide al administrador que la vincule.</p>
+        <button type="button" className="btn btn-secondary btn-block" onClick={() => actions.signOut()}>Cerrar sesión</button>
+      </AuthScreen>
+    );
+  }
   if (status === 'error') {
     return (
-      <div className="loading-screen">
-        <p>No se pudieron cargar los datos guardados.</p>
-        <button type="button" className="btn btn-primary" onClick={() => actions.reload()}>Reintentar</button>
-      </div>
+      <AuthScreen title="No se pudieron cargar los datos">
+        <p className="auth-text">Revisa tu conexión e inténtalo de nuevo.</p>
+        <button type="button" className="btn btn-primary btn-block" onClick={() => actions.reload()}>Reintentar</button>
+      </AuthScreen>
     );
   }
 

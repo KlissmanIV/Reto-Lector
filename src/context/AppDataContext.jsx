@@ -1,20 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as storage from '../services/storageService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import { calcularPuntos, determineLeader, findAward, getChallengeScores } from '../utils/scoring';
 import { isWithin, todayISO } from '../utils/dates';
 import { useToast } from './ToastContext';
 
 const AppDataContext = createContext(null);
 
-const SAVERS = {
-  users: storage.saveUsers,
-  books: storage.saveBooks,
-  challenges: storage.saveChallenges,
-  history: storage.saveHistory,
-  settings: storage.saveSettings,
-};
-
-const EMPTY = { users: [], books: [], challenges: [], history: [], settings: storage.DEFAULT_SETTINGS };
+const emptyData = () => ({ users: [], books: [], challenges: [], history: [], settings: storage.readSettings(), email: null });
 const MERGE_WINDOW_MS = 30 * 60 * 1000;
 
 function event(type, fields) {
@@ -23,38 +16,69 @@ function event(type, fields) {
 
 export function AppDataProvider({ children }) {
   const { toast } = useToast();
-  const [data, setData] = useState(EMPTY);
-  const [status, setStatus] = useState('loading');
-  const ref = useRef(EMPTY);
+  const [data, setData] = useState(emptyData);
+  // loading | signedOut | noProfile | ready | error | unconfigured
+  const [status, setStatus] = useState(isSupabaseConfigured ? 'loading' : 'unconfigured');
+  const ref = useRef(data);
+  const pending = useRef(0);
 
-  const load = useCallback(async (loader = storage.loadAll) => {
+  const load = useCallback(async () => {
     try {
-      const next = await loader();
+      const next = await storage.loadAll();
       ref.current = next;
       setData(next);
       setStatus('ready');
-    } catch {
-      setStatus('error');
+    } catch (err) {
+      if (err.message === 'NO_SESSION') setStatus('signedOut');
+      else if (err.message === 'NO_PROFILE') setStatus('noProfile');
+      else setStatus((s) => (s === 'ready' ? s : 'error'));
     }
   }, []);
 
+  // Sesión: carga al iniciar sesión y limpia los datos al cerrarla.
   useEffect(() => {
-    load();
+    if (!isSupabaseConfigured) return undefined;
+    return storage.onAuthChange((authEvent, session) => {
+      if (authEvent === 'SIGNED_OUT' || !session) {
+        const empty = emptyData();
+        ref.current = empty;
+        setData(empty);
+        setStatus('signedOut');
+      } else if (authEvent === 'INITIAL_SESSION' || authEvent === 'SIGNED_IN') {
+        // Fuera del callback de auth para no bloquear el cliente de Supabase.
+        setTimeout(load, 0);
+      }
+    });
   }, [load]);
 
-  /** Aplica cambios al estado y los persiste a través de storageService. */
+  // Al volver a la pestaña se traen los cambios hechos desde otro dispositivo.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && status === 'ready' && pending.current === 0) load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [status, load]);
+
+  /** Aplica cambios al estado al instante y los persiste a través de storageService. */
   const commit = useCallback(
     async (partial) => {
-      const next = { ...ref.current, ...partial };
+      const prev = ref.current;
+      const next = { ...prev, ...partial };
       ref.current = next;
       setData(next);
+      pending.current += 1;
       try {
-        await Promise.all(Object.keys(partial).map((k) => SAVERS[k](next[k])));
+        await storage.persistChanges(prev, next, Object.keys(partial));
       } catch (err) {
         toast(err.message || 'No se pudieron guardar los cambios.', { tone: 'error' });
+        // Se vuelve al estado real del servidor para no mostrar datos no guardados.
+        await load();
+      } finally {
+        pending.current -= 1;
       }
     },
-    [toast],
+    [toast, load],
   );
 
   // ---------- Derivados ----------
@@ -295,8 +319,14 @@ export function AppDataProvider({ children }) {
     [commit],
   );
 
-  const resetDemo = useCallback(() => load(storage.resetDemoData), [load]);
-  const clearAll = useCallback(() => load(storage.clearData), [load]);
+  const signIn = useCallback((email, password) => storage.signIn(email, password), []);
+  const signOut = useCallback(() => storage.signOut(), []);
+
+  const importLegacy = useCallback(async () => {
+    const count = await storage.importLegacyData(ref.current.settings.activeUserId);
+    await load();
+    return count;
+  }, [load]);
 
   const value = useMemo(
     () => ({
@@ -306,15 +336,16 @@ export function AppDataProvider({ children }) {
       scores,
       leader,
       usersById,
-      currentUser: usersById[data.settings.activeUserId] ?? data.users[0] ?? null,
+      currentUser: usersById[data.settings.activeUserId] ?? null,
       actions: {
         addBook, updateBook, updateProgress, setBookStatus, finishBook, deleteBook,
         createChallenge, updateChallenge, closeChallenge,
-        updateUser, updateSettings, resetDemo, clearAll, reload: load,
+        updateUser, updateSettings, reload: load, signIn, signOut, importLegacy,
       },
     }),
     [data, status, activeChallenge, scores, leader, usersById, addBook, updateBook, updateProgress, setBookStatus,
-      finishBook, deleteBook, createChallenge, updateChallenge, closeChallenge, updateUser, updateSettings, resetDemo, clearAll, load],
+      finishBook, deleteBook, createChallenge, updateChallenge, closeChallenge, updateUser, updateSettings, load,
+      signIn, signOut, importLegacy],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

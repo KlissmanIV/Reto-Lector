@@ -67,7 +67,7 @@ export default function Dashboard() {
               user={u}
               books={books.filter((b) => b.ownerId === u.id && b.status === 'reading')}
               onOpen={openBook}
-              onAdd={() => openBookForm(null, { ownerId: u.id, status: 'reading' })}
+              onAdd={u.id === currentUser?.id ? () => openBookForm(null, { status: 'reading' }) : null}
             />
           ))}
         </div>

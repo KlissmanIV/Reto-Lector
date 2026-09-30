@@ -15,25 +15,22 @@ function Brand() {
 }
 
 function UserSwitch({ compact = false }) {
-  const { users, currentUser, actions } = useAppData();
-  if (!currentUser || users.length < 2) return null;
-  const other = users.find((u) => u.id !== currentUser.id);
+  const { currentUser } = useAppData();
+  if (!currentUser) return null;
   return (
-    <button
-      type="button"
+    <NavLink
+      to={`/perfil/${currentUser.id}`}
       className={`user-switch ${compact ? 'is-compact' : ''}`}
-      onClick={() => actions.updateSettings({ activeUserId: other.id })}
-      aria-label={`Usando la app como ${currentUser.shortName}. Cambiar a ${other.shortName}`}
-      title={`Cambiar a ${other.shortName}`}
+      aria-label={`Sesión de ${currentUser.shortName}. Ver mi perfil`}
     >
       <Avatar user={currentUser} size={compact ? 30 : 34} />
       {!compact && (
         <span className="user-switch-text">
-          <span className="user-switch-label">Usando como</span>
+          <span className="user-switch-label">Sesión iniciada</span>
           <span className="user-switch-name">{currentUser.shortName}</span>
         </span>
       )}
-    </button>
+    </NavLink>
   );
 }
 
