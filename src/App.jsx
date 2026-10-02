@@ -11,6 +11,7 @@ import Challenge from './pages/Challenge';
 import History from './pages/History';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Streak from './pages/Streak';
 import Login, { AuthScreen } from './pages/Login';
 
 /** Aplica el tema (light / dark / system) y reacciona a cambios del sistema. */
@@ -77,6 +78,7 @@ function AppRoutes() {
           <Route path="biblioteca" element={<Library />} />
           <Route path="desafio" element={<Challenge />} />
           <Route path="historial" element={<History />} />
+          <Route path="racha" element={<Streak />} />
           <Route path="perfil" element={<Profile />} />
           <Route path="perfil/:userId" element={<Profile />} />
           <Route path="ajustes" element={<Settings />} />

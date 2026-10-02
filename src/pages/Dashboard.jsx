@@ -8,6 +8,7 @@ import WinnerBanner from '../components/challenge/WinnerBanner';
 import { useCloseChallenge } from '../components/challenge/useChallengeActions';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import ReadingNow from '../components/dashboard/ReadingNow';
+import StreakCard from '../components/streak/StreakCard';
 import { EmptyState } from '../components/common/ui';
 import { isChallengeOver } from '../utils/dates';
 
@@ -57,6 +58,11 @@ export default function Dashboard() {
           </EmptyState>
         </section>
       )}
+
+      <section className="section" aria-labelledby="streak-summary">
+        <h2 id="streak-summary" className="visually-hidden">Tu racha</h2>
+        <StreakCard />
+      </section>
 
       <section className="section" aria-labelledby="reading-now">
         <h2 id="reading-now" className="section-title">Leyendo ahora</h2>

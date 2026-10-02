@@ -143,7 +143,7 @@ function BookForm({ book, defaults, onDone, onCancel }) {
             <>
               <div className="field">
                 <span className="field-label">Estado</span>
-                <Segmented label="Estado inicial" options={STATUS_OPTIONS} value={values.status} onChange={set('status')} size="sm" />
+                <Segmented label="Estado inicial" options={STATUS_OPTIONS} value={values.status} onChange={set('status')} size="sm" className="is-block" />
                 {values.status === 'finished' && <p className="field-hint">Se marcará como terminado y sumará sus puntos al desafío en curso.</p>}
               </div>
               {values.status === 'reading' && (

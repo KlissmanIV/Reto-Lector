@@ -3,11 +3,12 @@ import * as storage from '../services/storageService';
 import { isSupabaseConfigured } from '../services/supabaseClient';
 import { calcularPuntos, determineLeader, findAward, getChallengeScores } from '../utils/scoring';
 import { isWithin, todayISO } from '../utils/dates';
+import { getStreakState } from '../utils/streak';
 import { useToast } from './ToastContext';
 
 const AppDataContext = createContext(null);
 
-const emptyData = () => ({ users: [], books: [], challenges: [], history: [], settings: storage.readSettings(), email: null });
+const emptyData = () => ({ users: [], books: [], challenges: [], history: [], streaks: {}, settings: storage.readSettings(), email: null });
 const MERGE_WINDOW_MS = 30 * 60 * 1000;
 
 function event(type, fields) {
@@ -81,6 +82,28 @@ export function AppDataProvider({ children }) {
     [toast, load],
   );
 
+  /**
+   * Trae las rachas recalculadas por la base de datos tras guardar páginas
+   * y avisa si la racha empezó, subió o se salvó del periodo de gracia.
+   */
+  const refreshStreaks = useCallback(
+    async (userId) => {
+      const before = getStreakState(ref.current.streaks?.[userId]);
+      const streaks = await storage.getStreaks();
+      if (!Object.keys(streaks).length) return;
+      ref.current = { ...ref.current, streaks };
+      setData((d) => ({ ...d, streaks }));
+      if (userId !== ref.current.settings.activeUserId) return;
+
+      const after = getStreakState(streaks[userId]);
+      const days = (n) => `${n} ${n === 1 ? 'día' : 'días'}`;
+      if (after.count === 1 && before.count === 0) toast(`Racha iniciada · ${days(1)}`, { tone: 'streak' });
+      else if (after.count > before.count) toast(`¡Racha de ${days(after.count)}!`, { tone: 'streak' });
+      else if (before.status === 'grace' && after.status === 'active') toast(`Racha salvada · ${days(after.count)}`, { tone: 'streak' });
+    },
+    [toast],
+  );
+
   // ---------- Derivados ----------
   const activeChallenge = useMemo(() => data.challenges.find((c) => c.status === 'active') ?? null, [data.challenges]);
   const scores = useMemo(() => getChallengeScores(activeChallenge, data.history), [activeChallenge, data.history]);
@@ -114,9 +137,10 @@ export function AppDataProvider({ children }) {
       });
 
       await commit({ books: books.map((b) => (b.id === bookId ? updated : b)), history: [ev, ...history] });
+      if (ev.pagesDelta > 0) refreshStreaks(book.ownerId);
       return { points, awarded: points > 0, alreadyAwarded: !!already, noChallenge: !eligible };
     },
-    [commit],
+    [commit, refreshStreaks],
   );
 
   const addBook = useCallback(
@@ -203,8 +227,10 @@ export function AppDataProvider({ children }) {
         : [event('progress', { userId: book.ownerId, bookId, bookTitle: book.title, challengeId, pagesDelta: delta, page: target }), ...history];
 
       await commit({ books: books.map((b) => (b.id === bookId ? updated : b)), history: nextHistory });
+      // Solo un aumento real de páginas puede afectar a la racha.
+      if (delta > 0) await refreshStreaks(book.ownerId);
     },
-    [commit],
+    [commit, refreshStreaks],
   );
 
   /** Cambia el estado. Terminar pasa por finishBook; deshacer un terminado revierte sus puntos del desafío activo. */

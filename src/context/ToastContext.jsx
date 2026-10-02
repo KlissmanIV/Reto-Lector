@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
+import { CircleAlert, CircleCheck, Flame, Info, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
-const ICONS = { success: CircleCheck, error: CircleAlert, info: Info };
+const ICONS = { success: CircleCheck, error: CircleAlert, info: Info, streak: Flame };
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);

@@ -10,7 +10,7 @@ npm run dev            # http://localhost:5188
 
 ## Puesta en marcha de Supabase (una sola vez)
 
-1. **SQL Editor**: ejecuta `supabase/schema.sql` y después `supabase/seed.sql`. Ambos se pueden volver a ejecutar sin duplicar datos.
+1. **SQL Editor**: ejecuta en este orden `supabase/schema.sql`, `supabase/streaks.sql` y `supabase/seed.sql`. Todos se pueden volver a ejecutar sin duplicar ni borrar datos.
 2. **Authentication > Users > Add user**: crea una cuenta (correo + contraseña, marcando *Auto Confirm User*) para Giovanni y otra para Klissman.
 3. **Authentication > Sign In / Providers**: desactiva *Allow new users to sign up* para que nadie más pueda registrarse.
 4. **SQL Editor**: vincula cada cuenta con su participante (bloque comentado al final de `seed.sql`, con los correos reales).
@@ -31,6 +31,13 @@ Nunca uses la clave `service_role` en el frontend.
 - Solo las cuentas vinculadas a un participante ven datos. Los usuarios anónimos o sin perfil no ven nada.
 - Cada participante crea, edita y borra solo sus libros y su perfil. Los retos son compartidos.
 - Un índice único impide que un libro sume puntos dos veces en el mismo reto.
+
+## Racha lectora
+
+- La calcula la base de datos (`supabase/streaks.sql`): un trigger sobre `books` registra una lectura cuando `current_page` supera la página más alta alcanzada en ese libro. Bajar páginas o volver a subir hasta donde ya estabas no cuenta.
+- Suma como máximo +1 cada 24 h. Activa 24 h tras la última lectura, en riesgo de 24 a 48 h, perdida a partir de 48 h (la siguiente lectura empieza en 1).
+- La hora es la del servidor, así que da igual el dispositivo o la zona horaria. El cliente no puede escribir rachas (solo leerlas).
+- `src/utils/streak.js` interpreta el estado para la interfaz (activa, en riesgo o perdida, y el tiempo restante).
 
 ## Reglas de puntuación
 

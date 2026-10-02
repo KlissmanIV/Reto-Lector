@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Plus, Settings } from 'lucide-react';
-import { NAV_ITEMS, SETTINGS_ITEM } from './navItems';
+import { NAV_ITEMS, SETTINGS_ITEM, STREAK_ITEM } from './navItems';
+import StreakChip, { StreakCount } from '../streak/StreakChip';
 import { Avatar } from '../common/ui';
 import { useAppData } from '../../context/AppDataContext';
 import { useUi } from '../../context/UiContext';
@@ -48,10 +49,11 @@ export default function AppShell() {
           <Plus size={18} aria-hidden="true" /> Añadir libro
         </button>
         <nav className="side-nav">
-          {[...NAV_ITEMS, SETTINGS_ITEM].map(({ to, label, icon: Icon, end }) => (
+          {[...NAV_ITEMS.slice(0, 3), STREAK_ITEM, ...NAV_ITEMS.slice(3), SETTINGS_ITEM].map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className="side-link">
               <Icon size={20} strokeWidth={1.9} aria-hidden="true" />
               <span>{label}</span>
+              {to === STREAK_ITEM.to && <StreakCount />}
             </NavLink>
           ))}
         </nav>
@@ -63,6 +65,7 @@ export default function AppShell() {
       <header className="mobile-bar">
         <Brand />
         <div className="mobile-bar-actions">
+          <StreakChip />
           <UserSwitch compact />
           <NavLink to={SETTINGS_ITEM.to} className="icon-btn" aria-label="Ajustes">
             <Settings size={20} />

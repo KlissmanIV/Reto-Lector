@@ -68,6 +68,11 @@ const challengeToRow = (c) => ({
   winner_id: c.winnerId ?? null, tie: !!c.tie, created_at: c.createdAt || undefined, closed_at: c.closedAt ?? null,
 });
 
+const streakFromRow = (r) => ({
+  profileId: r.profile_id, currentStreak: r.current_streak, bestStreak: r.best_streak,
+  startedAt: iso(r.started_at), lastReadAt: iso(r.last_read_at), lastIncrementAt: iso(r.last_increment_at),
+});
+
 const eventFromRow = (r) => ({
   id: r.id, type: r.type, userId: r.user_id, bookId: r.book_id, bookTitle: r.book_title,
   challengeId: r.challenge_id, pages: r.pages, pagesDelta: r.pages_delta, page: r.page, points: r.points, at: iso(r.at),
@@ -124,6 +129,7 @@ export async function loadAll() {
     supabase.from('events').select('*').order('at', { ascending: false }),
     getSettings(),
   ]);
+  const streaks = await getStreaks();
   for (const res of [profiles, books, challenges, events]) check(res, 'No se pudieron cargar los datos.');
 
   // Los participantes desactivados se ocultan junto con todo lo relacionado con ellos.
@@ -146,9 +152,20 @@ export async function loadAll() {
     books: books.data.map(bookFromRow).filter((b) => activeIds.has(b.ownerId)),
     challenges: challengeList,
     history: history.filter((e) => !e.challengeId || challengeIds.has(e.challengeId)),
+    streaks: Object.fromEntries(Object.entries(streaks).filter(([id]) => activeIds.has(id))),
     settings: { ...settings, activeUserId: me.id },
     email: session.user.email,
   };
+}
+
+/**
+ * Rachas por participante ({ [profileId]: streak }). Las calcula la base de datos
+ * al guardar progreso; si la migración de rachas aún no existe, devuelve {}.
+ */
+export async function getStreaks() {
+  const { data, error } = await supabase.from('reading_streaks').select('*');
+  if (error) return {};
+  return Object.fromEntries(data.map((r) => [r.profile_id, streakFromRow(r)]));
 }
 
 // ---------------------------------------------------------------------------
