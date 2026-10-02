@@ -27,7 +27,7 @@ export default function ReadingNow({ user, books, onOpen, onAdd }) {
             const pct = progressPercent(b);
             return (
               <li key={b.id}>
-                <button type="button" className="rn-item" onClick={() => onOpen(b.id)}>
+                <div className="rn-item">
                   <BookCover book={b} size="xs" />
                   <span className="rn-info">
                     <span className="rn-title">{b.title}</span>
@@ -37,7 +37,8 @@ export default function ReadingNow({ user, books, onOpen, onAdd }) {
                       {formatNumber(b.currentPage)} / {formatNumber(b.pages)} pág. <span aria-hidden="true">·</span> {pct}%
                     </span>
                   </span>
-                </button>
+                  <button type="button" className="hit-area" onClick={() => onOpen(b.id)} aria-label={`Ver ${b.title}`} />
+                </div>
               </li>
             );
           })}

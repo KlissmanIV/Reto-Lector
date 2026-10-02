@@ -23,14 +23,15 @@ function ScoredBooks({ user, events, onOpen }) {
         <ul className="scored-list">
           {events.map(({ event, book }) => (
             <li key={event.id}>
-              <button type="button" className="scored-item" onClick={() => book && onOpen(book.id)} disabled={!book}>
+              <div className="scored-item">
                 {book ? <BookCover book={book} size="xs" /> : <span className="cover-missing" />}
                 <span className="scored-info">
                   <span className="scored-title">{event.bookTitle}</span>
                   <span className="scored-meta tabular">{event.pages} pág. <span aria-hidden="true">·</span> {formatShortDate(event.at)}</span>
                 </span>
                 <span className="points-chip tabular">+{event.points}</span>
-              </button>
+                {book && <button type="button" className="hit-area" onClick={() => onOpen(book.id)} aria-label={`Ver ${event.bookTitle}`} />}
+              </div>
             </li>
           ))}
         </ul>
