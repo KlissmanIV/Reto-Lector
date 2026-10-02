@@ -126,20 +126,26 @@ export async function loadAll() {
   ]);
   for (const res of [profiles, books, challenges, events]) check(res, 'No se pudieron cargar los datos.');
 
-  const users = profiles.data.map(userFromRow);
+  // Los participantes desactivados se ocultan junto con todo lo relacionado con ellos.
+  const users = profiles.data.filter((r) => r.active !== false).map(userFromRow);
+  const activeIds = new Set(users.map((u) => u.id));
   const me = users.find((u) => u.authUserId === session.user.id);
   if (!me) throw new Error('NO_PROFILE');
 
-  const history = events.data.map(eventFromRow);
-  const challengeList = challenges.data.map(challengeFromRow).map((c) =>
+  const history = events.data.map(eventFromRow).filter((e) => !e.userId || activeIds.has(e.userId));
+  const visibleChallenges = challenges.data
+    .map(challengeFromRow)
+    .filter((c) => c.participants.every((id) => activeIds.has(id)));
+  const challengeIds = new Set(visibleChallenges.map((c) => c.id));
+  const challengeList = visibleChallenges.map((c) =>
     c.status === 'closed' ? { ...c, finalScores: getChallengeScores(c, history) } : c,
   );
 
   return {
     users,
-    books: books.data.map(bookFromRow),
+    books: books.data.map(bookFromRow).filter((b) => activeIds.has(b.ownerId)),
     challenges: challengeList,
-    history,
+    history: history.filter((e) => !e.challengeId || challengeIds.has(e.challengeId)),
     settings: { ...settings, activeUserId: me.id },
     email: session.user.email,
   };

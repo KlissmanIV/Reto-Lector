@@ -17,6 +17,9 @@ create table if not exists public.profiles (
   created_at   timestamptz not null default now()
 );
 
+-- Desactivar un participante lo oculta junto con sus datos sin borrarlos.
+alter table public.profiles add column if not exists active boolean not null default true;
+
 create table if not exists public.challenges (
   id         text primary key,
   name       text not null check (char_length(name) between 1 and 60),
@@ -98,7 +101,7 @@ $$;
 
 create or replace function public.is_member()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles where auth_user_id = auth.uid())
+  select exists (select 1 from public.profiles where auth_user_id = auth.uid() and active)
 $$;
 
 -- ---------------------------------------------------------------------------
